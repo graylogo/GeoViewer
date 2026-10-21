@@ -58,36 +58,17 @@ struct MapPane: View {
     }
 
     private var zoomControls: some View {
-        VStack(spacing: 0) {
-            Button {
+        VStack(spacing: 8) {
+            MapControlButton(systemImage: "plus", help: "放大") {
                 model.zoom(by: 0.5)
-            } label: {
-                Image(systemName: "plus")
-                    .frame(width: 26, height: 28)
             }
-            Divider()
-            Button {
+            MapControlButton(systemImage: "minus", help: "缩小") {
                 model.zoom(by: 2)
-            } label: {
-                Image(systemName: "minus")
-                    .frame(width: 26, height: 28)
             }
-            Divider()
-            Button {
+            MapControlButton(systemImage: "arrow.up.left.and.arrow.down.right", help: "显示全部照片") {
                 model.fitAll()
-            } label: {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .frame(width: 26, height: 28)
             }
-            .help("显示全部照片")
         }
-        .buttonStyle(.plain)
-        .padding(3)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(Color.black.opacity(0.08))
-        )
         .padding(14)
     }
 
@@ -118,6 +99,38 @@ struct MapPane: View {
             .background(.regularMaterial, in: Capsule())
             .padding(14)
         }
+    }
+}
+
+/// 圆形玻璃控制按钮：macOS 26 起使用系统 Liquid Glass，旧系统退化为毛玻璃圆钮。
+struct MapControlButton: View {
+    let systemImage: String
+    let help: String
+    let action: () -> Void
+
+    var body: some View {
+        if #available(macOS 26.0, *) {
+            button.buttonStyle(.glass)
+        } else {
+            button
+                .buttonStyle(.plain)
+                .background(.regularMaterial, in: Circle())
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.18), radius: 3, y: 1)
+        }
+    }
+
+    private var button: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .frame(width: 34, height: 34)
+                .contentShape(Circle())
+        }
+        .help(help)
     }
 }
 

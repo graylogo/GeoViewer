@@ -67,6 +67,17 @@ final class AppModel {
     @ObservationIgnored private var toastTask: Task<Void, Never>?
     @ObservationIgnored private var didAutoFit = false
     @ObservationIgnored private var pendingURLs: [URL] = []
+
+    /// 位置数据版本：任何暂存坐标变化都会自增，用于让聚合缓存失效。
+    @ObservationIgnored private var locationVersion = 0
+    @ObservationIgnored private var clustersCache: ClustersCache?
+
+    private struct ClustersCache {
+        let zoomLevel: Int
+        let locationVersion: Int
+        let locatedCount: Int
+        let clusters: [PhotoCluster]
+    }
     @ObservationIgnored private let settings = AppSettings.shared
 
     init() {
@@ -189,6 +200,11 @@ final class AppModel {
         let items = loaded.map { PhotoItem(url: $0.0, details: $0.1) }
         photos.append(contentsOf: items)
         photos.sort { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+        locationVersion += 1
+        clustersCache = nil
+
+        // 提前生成列表与地图标记要用的缩略图，避免滚动 / 缩放时出现空白一帧。
+        prefetchThumbnails(for: items)
 
         if selection.isEmpty, let first = photos.first {
             selection = [first.id]
@@ -217,6 +233,8 @@ final class AppModel {
         undoStack.removeAll()
         redoStack.removeAll()
         didAutoFit = false
+        locationVersion += 1
+        clustersCache = nil
         Task { await ThumbnailProvider.shared.clearCache() }
     }
 
@@ -226,6 +244,8 @@ final class AppModel {
         if let primaryID, !photos.contains(where: { $0.id == primaryID }) {
             self.primaryID = nil
         }
+        locationVersion += 1
+        clustersCache = nil
     }
 
     // MARK: - 缩略图
@@ -242,6 +262,18 @@ final class AppModel {
 
         if let box = await ThumbnailProvider.shared.thumbnail(for: photo.url, maxPixel: maxPixel) {
             photo.thumbnails[maxPixel] = box.image
+        }
+    }
+
+    /// 后台预取列表与地图标记尺寸的缩略图，避免滚动 / 缩放时出现空白一帧。
+    private func prefetchThumbnails(for items: [PhotoItem]) {
+        guard !items.isEmpty else { return }
+        let batch = items
+        Task { [weak self] in
+            for item in batch {
+                await self?.loadThumbnail(for: item, maxPixel: 120)
+                await self?.loadThumbnail(for: item, maxPixel: 220)
+            }
         }
     }
 
@@ -268,6 +300,7 @@ final class AppModel {
             changes.append(PhotoLocationChange(photo: photo, oldCoordinate: photo.stagedCoordinate, newCoordinate: coordinate))
             photo.stagedCoordinate = coordinate
         }
+        locationVersion += 1
         push(PhotoLocationEdit(changes: changes))
 
         let result: String
@@ -293,6 +326,7 @@ final class AppModel {
         for change in edit.changes {
             change.photo.stagedCoordinate = change.oldCoordinate
         }
+        locationVersion += 1
         redoStack.append(edit)
         showToast("已撤销位置修改", kind: .info)
     }
@@ -302,6 +336,7 @@ final class AppModel {
         for change in edit.changes {
             change.photo.stagedCoordinate = change.newCoordinate
         }
+        locationVersion += 1
         undoStack.append(edit)
         showToast("已重做位置修改", kind: .info)
     }
@@ -312,6 +347,8 @@ final class AppModel {
         for photo in photos where photo.isDirty {
             photo.revertToSaved()
         }
+        locationVersion += 1
+        clustersCache = nil
         undoStack.removeAll()
         redoStack.removeAll()
         showToast("已放弃 \(count) 张照片的未保存修改")
@@ -374,6 +411,7 @@ final class AppModel {
                 ).value {
                     photo.details = refreshed
                     photo.stagedCoordinate = refreshed.gps?.coordinate
+                    locationVersion += 1
 
                     if let coordinate {
                         if let actual = refreshed.gps?.coordinate, !actual.isClose(to: coordinate) {
@@ -384,6 +422,8 @@ final class AppModel {
                     }
                 } else {
                     photo.commitSavedCoordinate(coordinate)
+                    locationVersion += 1
+                    clustersCache = nil
                     failures.append("\(url.lastPathComponent)：写入后无法读取文件")
                 }
 
@@ -452,12 +492,26 @@ final class AppModel {
     // MARK: - 地图
 
     /// 网格聚合：随地图缩放自动合并 / 拆分，形成相册式的缩略图堆叠。
+    ///
+    /// 缩放级别被量化成整数档位，并缓存聚合结果，避免滚轮缩放时每帧重算导致标记闪烁。
     var clusters: [PhotoCluster] {
         let located = photos.filter { $0.stagedCoordinate != nil }
-        guard !located.isEmpty else { return [] }
+        guard !located.isEmpty else {
+            clustersCache = nil
+            return []
+        }
 
-        let latitudeCell = max(mapRegion.span.latitudeDelta / 8, 0.00003)
-        let longitudeCell = max(mapRegion.span.longitudeDelta / 8, 0.00003)
+        let level = zoomLevel
+        if let cache = clustersCache,
+           cache.zoomLevel == level,
+           cache.locationVersion == locationVersion,
+           cache.locatedCount == located.count {
+            return cache.clusters
+        }
+
+        let cell = cellSize(for: level)
+        let latitudeCell = cell
+        let longitudeCell = cell
 
         var buckets: [String: [PhotoItem]] = [:]
         for photo in located {
@@ -467,7 +521,7 @@ final class AppModel {
             buckets["\(latitudeIndex):\(longitudeIndex)", default: []].append(photo)
         }
 
-        return buckets.map { key, items in
+        let result = buckets.map { key, items in
             let latitudes = items.compactMap { $0.stagedCoordinate?.latitude }
             let longitudes = items.compactMap { $0.stagedCoordinate?.longitude }
             let center = GeoCoordinate(
@@ -478,6 +532,24 @@ final class AppModel {
             return PhotoCluster(id: key, coordinate: center, photos: sorted)
         }
         .sorted { $0.count > $1.count }
+
+        clustersCache = ClustersCache(
+            zoomLevel: level,
+            locationVersion: locationVersion,
+            locatedCount: located.count,
+            clusters: result
+        )
+        return result
+    }
+
+    /// 把连续缩放量化成整数档位（每档对应约两倍的视野变化）。
+    private var zoomLevel: Int {
+        let span = max(mapRegion.span.longitudeDelta, 0.00005)
+        return Int(round(log2(360.0 / span)))
+    }
+
+    private func cellSize(for level: Int) -> Double {
+        max(360.0 / pow(2.0, Double(level)) / 14.0, 0.00003)
     }
 
     func handleMapTap(on cluster: PhotoCluster) {
