@@ -24,6 +24,7 @@ struct MapPane: View {
             .onMapCameraChange(frequency: .onEnd) { context in
                 model.mapRegion = context.region
             }
+            .gesture(magnifyGesture)
             .onTapGesture { point in
                 guard model.locationMode,
                       let location = proxy.convert(point, from: .local)
@@ -38,6 +39,26 @@ struct MapPane: View {
             .overlay { locationModeBorder }
             .overlay(alignment: .bottomLeading) { clusterSummary }
         }
+    }
+
+    /// macOS 的 SwiftUI `Map` 默认不响应触摸板捏合缩放，这里手动把 magnify 事件换算成视野变化。
+    ///
+    /// 基准取**手势开始时的 region**（见 `AppModel.zoomFromGestureStart`），不能直接用 `mapRegion`：
+    /// 后者只在 `onMapCameraChange(.onEnd)` 时才更新，手势期间读到的始终是旧值，
+    /// 每一帧都在旧值上再乘一次倍率，视野要么不动要么剧烈跳动。
+    private var magnifyGesture: some Gesture {
+        MagnifyGesture()
+            .onChanged { value in
+                // 首次触发时记下起始视野，后续帧都基于它换算。
+                let start = model.gestureStartRegion ?? model.mapRegion
+                model.gestureStartRegion = start
+                // 捏开（倍率 > 1）→ 视野变窄 → 放大，所以取倒数。
+                let factor = Double(1 / max(value.magnification, 0.0001))
+                model.zoomFromGestureStart(by: factor)
+            }
+            .onEnded { _ in
+                model.gestureStartRegion = nil
+            }
     }
 
     private var hint: some View {
@@ -59,6 +80,15 @@ struct MapPane: View {
 
     private var zoomControls: some View {
         VStack(spacing: 8) {
+            MapControlButton(systemImage: "viewfinder", help: "放大到街道（看清路）") {
+                model.zoomToStreetLevelForPrimary()
+            }
+            .disabled(model.primaryPhoto?.stagedCoordinate == nil)
+
+            Divider()
+                .frame(width: 16)
+                .padding(.vertical, 1)
+
             MapControlButton(systemImage: "plus", help: "放大") {
                 model.zoom(by: 0.5)
             }

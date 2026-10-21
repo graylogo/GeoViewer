@@ -49,6 +49,7 @@ struct GeoViewerCommands: Commands {
 
             Button("粘贴坐标") { model.pasteCoordinateToSelection() }
                 .keyboardShortcut("v", modifiers: [.command, .option])
+                .disabled(!model.canPasteCoordinate)
 
             Button("删除位置") { model.clearLocationForSelection() }
                 .keyboardShortcut(.delete, modifiers: .command)
@@ -58,6 +59,10 @@ struct GeoViewerCommands: Commands {
 
             Button("在地图上显示") { model.focusOnPrimary() }
                 .keyboardShortcut("0", modifiers: .command)
+                .disabled(model.primaryPhoto?.stagedCoordinate == nil)
+
+            Button("放大到街道") { model.zoomToStreetLevelForPrimary() }
+                .keyboardShortcut("3", modifiers: .command)
                 .disabled(model.primaryPhoto?.stagedCoordinate == nil)
 
             Button("显示全部照片") { model.fitAll() }

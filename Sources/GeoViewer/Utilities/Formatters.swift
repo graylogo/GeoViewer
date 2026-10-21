@@ -57,6 +57,23 @@ enum Format {
         return formatter.string(from: date)
     }
 
+    /// 列表用的紧凑时间戳，精确到秒，便于按拍摄时间判断照片是否同一批。
+    ///
+    /// 固定 POSIX 区域与 24 小时制，避免跟随系统 12/24 小时设置漂移，
+    /// 导致同一批照片在不同机器上看起来对不齐。
+    private static let timestampFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter
+    }()
+
+    static func captureTimestamp(_ date: Date?) -> String {
+        guard let date else { return "无拍摄时间" }
+        return timestampFormatter.string(from: date)
+    }
+
     static func altitude(_ info: GPSInfo?) -> String {
         guard let altitude = info?.altitude else { return "未记录" }
         return String(format: "%.1f 米%@", abs(altitude), altitude < 0 ? "（海平面以下）" : "")

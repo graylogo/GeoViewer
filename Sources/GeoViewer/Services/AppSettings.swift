@@ -10,6 +10,9 @@ final class AppSettings {
         static let autoSave = "settings.autoSaveAfterEdit"
         static let backupEnabled = "settings.backupEnabled"
         static let backupFolder = "settings.backupFolderPath"
+        static let backupNoticeDismissed = "settings.backupNoticeDismissed"
+        static let sortOrder = "settings.sortOrder"
+        static let groupByFolder = "settings.groupByFolder"
         static let mapStyle = "settings.mapStyle"
         static let pinSize = "settings.pinSize"
     }
@@ -21,9 +24,24 @@ final class AppSettings {
         didSet { defaults.set(autoSaveAfterEdit, forKey: Key.autoSave) }
     }
 
-    /// 写入前备份原文件。
+    /// 写入前备份原文件（默认关闭，需要时可在设置中开启）。
     var backupEnabled: Bool {
         didSet { defaults.set(backupEnabled, forKey: Key.backupEnabled) }
+    }
+
+    /// 用户是否已在启动提示里选择「暂不开启」，选过之后不再重复提示。
+    var backupNoticeDismissed: Bool {
+        didSet { defaults.set(backupNoticeDismissed, forKey: Key.backupNoticeDismissed) }
+    }
+
+    /// 照片列表排序方式。
+    var sortOrder: PhotoSortOrder {
+        didSet { defaults.set(sortOrder.rawValue, forKey: Key.sortOrder) }
+    }
+
+    /// 照片列表是否按文件夹分组。
+    var groupByFolder: Bool {
+        didSet { defaults.set(groupByFolder, forKey: Key.groupByFolder) }
     }
 
     /// 备份根目录，默认放在 ~/Pictures/GeoViewer 备份。
@@ -44,8 +62,12 @@ final class AppSettings {
         self.defaults = defaults
 
         autoSaveAfterEdit = defaults.bool(forKey: Key.autoSave)
-        backupEnabled = defaults.object(forKey: Key.backupEnabled) as? Bool ?? true
+        // 默认关闭备份；已经显式改过的用户保留其选择。
+        backupEnabled = defaults.object(forKey: Key.backupEnabled) as? Bool ?? false
+        backupNoticeDismissed = defaults.bool(forKey: Key.backupNoticeDismissed)
         backupFolderPath = defaults.string(forKey: Key.backupFolder) ?? Self.defaultBackupFolder().path
+        sortOrder = PhotoSortOrder(rawValue: defaults.string(forKey: Key.sortOrder) ?? "") ?? .captureDateAscending
+        groupByFolder = defaults.object(forKey: Key.groupByFolder) as? Bool ?? true
         mapStyle = MapStyleKind(rawValue: defaults.string(forKey: Key.mapStyle) ?? "") ?? .standard
 
         let storedPinSize = defaults.double(forKey: Key.pinSize)

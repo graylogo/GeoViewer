@@ -51,8 +51,15 @@ struct ToastView: View {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if toast.undoable {
+                switch toast.action {
+                case .none:
+                    EmptyView()
+                case .undo:
                     Button("撤销") { model.undo() }
+                        .buttonStyle(.link)
+                        .font(.callout)
+                case .openSettings:
+                    Button("去开启") { model.openSettings() }
                         .buttonStyle(.link)
                         .font(.callout)
                 }

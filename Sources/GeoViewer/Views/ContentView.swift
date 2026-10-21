@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AppModel.self) private var model
+    @Environment(AppSettings.self) private var settings
 
     var body: some View {
         @Bindable var model = model
@@ -51,6 +52,7 @@ struct ContentView: View {
         .overlay(alignment: .bottom) {
             ToastView()
         }
+        .task { presentBackupNoticeIfNeeded() }
         .alert("输入经纬度", isPresented: $model.showsCoordinatePrompt) {
             TextField("例如 30.2741, 120.1551", text: $model.coordinateInput)
             Button("应用到所选照片") { model.applyManualInput() }
@@ -121,6 +123,17 @@ struct ContentView: View {
             .disabled(!model.hasUnsavedChanges || model.isSaving)
             .help("保存位置修改（⌘S）")
         }
+    }
+
+    /// 启动时提示一次原片备份的开关状态；用户选过「暂不开启」后不再重复打扰。
+    private func presentBackupNoticeIfNeeded() {
+        guard !settings.backupEnabled, !settings.backupNoticeDismissed else { return }
+        model.showToast(
+            "原片备份当前是关闭的，保存位置会直接改写原文件；点「去开启」打开设置",
+            kind: .warning,
+            action: .openSettings,
+            duration: .seconds(8)
+        )
     }
 
     private var errorBinding: Binding<Bool> {
