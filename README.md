@@ -1,5 +1,9 @@
 # GeoViewer
 
+<p align="center">
+  <img src="Assets/AppIcon.png" width="128" alt="GeoViewer 图标">
+</p>
+
 一个 macOS 原生的照片位置查看 / 编辑工具。打开文件或文件夹，在地图上以相册般的缩略图查看照片位置，并把位置友好地写回照片——**只改 GPS，不动照片的其它信息，也不重新压缩图像**。
 
 当前为初始化版本（0.1.0）：核心流程已跑通，可直接构建运行。
@@ -78,7 +82,9 @@ $BIN --clear-location 照片.jpg
 GeoViewer/
 ├── Package.swift                    # SwiftPM 清单（macOS 14+，无第三方依赖）
 ├── build_app.sh                     # 组装 .app / 可选 DMG
-├── Assets/                          # 放 AppIcon.png（1024×1024）即可自动生成图标
+├── Assets/
+│   ├── AppIcon.png                  # 1024×1024 图标源文件（构建脚本自动生成 .icns）
+│   └── icon.icon                    # Icon Composer 源文件（矢量，便于后续改图标）
 ├── scripts/
 │   └── metadata_snapshot.swift      # 导出全部 ImageIO 元数据 + 像素哈希，用于回归验证
 └── Sources/GeoViewer/
@@ -173,12 +179,12 @@ swift scripts/metadata_snapshot.swift 原图.jpg 修改后.jpg > snapshot.txt
 3. GPX 轨迹按拍摄时间批量定位
 4. PhotoKit：读写「照片」图库中的位置
 5. 聚合性能、缩略图磁盘缓存、大列表虚拟化
-6. 多语言（zh-Hans / en）、AppIcon、DMG 美化、Developer ID 签名与公证
+6. 多语言（zh-Hans / en）、DMG 美化、Developer ID 签名与公证
 7. 单元测试：大端 TIFF、损坏 EXIF、无 EXIF、MakerNotes、超大 EXIF 等边界
 
 ## 需要补充的资料
 
-1. **应用图标**：1024×1024 PNG，放到 `Assets/AppIcon.png`（构建脚本会自动生成 `.icns`）。
+1. **界面截图**：应用已内置图标（`Assets/AppIcon.png`），但 README 里还没有运行截图，你随手截几张发我即可。
 2. **真实样张**：iPhone HEIC / ProRAW、Canon/Nikon/Sony JPEG、扫描件 TIFF、带 GPS 与不带 GPS 各若干，用于回归验证（尤其是大端 TIFF 与 RAW）。
 3. **是否要写 RAW**：这是风险最高的部分，需要你确认优先级和可接受的备份策略。
 4. **分发信息**：正式 Bundle ID、Developer ID 证书（是否要做签名 + 公证）。
