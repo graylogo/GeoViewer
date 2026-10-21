@@ -4,9 +4,9 @@
   <img src="Assets/AppIcon.png" width="128" alt="GeoViewer 图标">
 </p>
 
-一个 macOS 原生的照片位置查看 / 编辑工具。打开文件或文件夹，在地图上以相册般的缩略图查看照片位置，并把位置友好地写回照片——**只改 GPS，不动照片的其它信息，也不重新压缩图像**。
+一个 macOS 原生的照片位置查看 / 编辑工具。打开文件或文件夹，在地图上以缩略图查看照片位置，需要时把位置写回照片文件——只改 GPS，不动其它元数据，也不重新压缩图像。
 
-当前为初始化版本（0.1.0）：核心流程已跑通，可直接构建运行。
+当前版本 0.2.0。
 
 ---
 
@@ -61,7 +61,7 @@ swift build                 # 编译
 ./build_app.sh              # 生成 .build/GeoViewer.app（ad-hoc 签名）
 open .build/GeoViewer.app
 
-MAKE_DMG=1 ./build_app.sh   # 额外生成 .build/dist/GeoViewer-0.1.0.dmg
+MAKE_DMG=1 ./build_app.sh   # 额外生成 .build/dist/GeoViewer-0.2.0.dmg
 APP_VERSION=0.2.0 ./build_app.sh
 ```
 
@@ -149,7 +149,7 @@ GeoViewer/
 
 - 先写同目录临时文件，再用 `FileManager.replaceItemAt` 替换，随后恢复创建时间、修改时间与 POSIX 权限；
 - 写入完成后立即回读，校验 GPS 是否等于目标值（EXIF 度分秒量化误差按 1e-5° ≈ 1 米容忍），不一致会报告失败；
-- 备份可选，默认开启，按日期分目录。
+- 原片备份可选，默认关闭，开启后按日期分目录。
 
 ### 实测验证（使用 exiftool 官方测试样张 + iPhone 拍摄的 HEIC）
 
@@ -194,7 +194,7 @@ swift scripts/metadata_snapshot.swift 原图.jpg 修改后.jpg > snapshot.txt
 
 ## 需要补充的资料
 
-1. **界面截图**：应用已内置图标（`Assets/AppIcon.png`），但 README 里还没有运行截图，你随手截几张发我即可。
+1. **界面截图**：应用已内置图标（`Assets/AppIcon.png`），官网 OG 图用的是 `GeoViewerSite/public/og.png`。README 若要放运行截图，需要先压缩——当前 og.png 约 4 MB，社交平台与 GitHub 上都偏大。
 2. **真实样张**：iPhone HEIC / ProRAW、Canon/Nikon/Sony JPEG、扫描件 TIFF、带 GPS 与不带 GPS 各若干，用于回归验证（尤其是大端 TIFF 与 RAW）。
 3. **是否要写 RAW**：这是风险最高的部分，需要你确认优先级和可接受的备份策略。
 4. **分发信息**：正式 Bundle ID、Developer ID 证书（是否要做签名 + 公证）。
