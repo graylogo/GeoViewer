@@ -1,0 +1,16 @@
+# 构建产物
+.build/
+.swiftpm/
+DerivedData/
+dist/
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xcodeproj/xcuserdata/
+
+# 系统文件
+.DS_Store
+
+# 本地调试
+*.log
