@@ -230,6 +230,11 @@ final class AppModel {
 
     // MARK: - 缩略图
 
+    /// 界面用到的缩略图尺寸（列表 / 地图标记 / 检查器）。
+    private enum ThumbnailSizes {
+        static let all = [120, 220, 900]
+    }
+
     func loadThumbnail(for photo: PhotoItem, maxPixel: Int) async {
         guard photo.thumbnails[maxPixel] == nil, !photo.pendingThumbnailSizes.contains(maxPixel) else { return }
         photo.pendingThumbnailSizes.insert(maxPixel)
@@ -382,7 +387,11 @@ final class AppModel {
                     failures.append("\(url.lastPathComponent)：写入后无法读取文件")
                 }
 
-                photo.thumbnails.removeAll()
+                // 文件已被替换：主动重新加载预览，避免界面停在空白占位。
+                photo.invalidateThumbnails()
+                for size in ThumbnailSizes.all {
+                    await loadThumbnail(for: photo, maxPixel: size)
+                }
             } catch {
                 failures.append("\(url.lastPathComponent)：\(error.localizedDescription)")
             }

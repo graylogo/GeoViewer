@@ -22,6 +22,18 @@ final class PhotoItem: Identifiable {
     var thumbnails: [Int: NSImage] = [:]
     var pendingThumbnailSizes: Set<Int> = []
 
+    /// 缩略图失效计数：变化时让界面重新加载预览。
+    var thumbnailVersion = 0
+
+    /// 供 `.task(id:)` 使用，保证失效后一定会重新加载而不是永远空白。
+    var thumbnailToken: String { "\(id)-\(thumbnailVersion)" }
+
+    func invalidateThumbnails() {
+        thumbnails.removeAll()
+        pendingThumbnailSizes.removeAll()
+        thumbnailVersion += 1
+    }
+
     init(url: URL, details: PhotoDetails) {
         self.url = url
         self.details = details

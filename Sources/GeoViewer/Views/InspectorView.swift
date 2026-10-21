@@ -86,7 +86,7 @@ struct InspectorView: View {
         .frame(height: 190)
         .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .task(id: photo.id) {
+        .task(id: photo.thumbnailToken) {
             await model.loadThumbnail(for: photo, maxPixel: 900)
         }
     }

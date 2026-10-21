@@ -29,7 +29,7 @@ struct PhotoThumbnail: View {
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .task(id: photo.id) {
+        .task(id: photo.thumbnailToken) {
             await model.loadThumbnail(for: photo, maxPixel: maxPixel)
         }
     }

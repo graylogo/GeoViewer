@@ -16,7 +16,8 @@ struct GeoViewerApp: App {
     @State private var settings = AppSettings.shared
 
     var body: some Scene {
-        WindowGroup("GeoViewer") {
+        // 单窗口应用：用 Window 而不是 WindowGroup，避免重复激活时开出一堆窗口。
+        Window("GeoViewer", id: "main") {
             ContentView()
                 .environment(model)
                 .environment(settings)
