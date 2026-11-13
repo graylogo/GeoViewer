@@ -6,7 +6,7 @@
 
 一个 macOS 原生的照片位置查看 / 编辑工具。打开文件或文件夹，在地图上以缩略图查看照片位置，需要时把位置写回照片文件——只改 GPS，不动其它元数据，也不重新压缩图像。
 
-当前版本 0.2.0。
+当前版本 0.3.0。
 
 ---
 
@@ -61,8 +61,8 @@ swift build                 # 编译
 ./build_app.sh              # 生成 .build/GeoViewer.app（ad-hoc 签名）
 open .build/GeoViewer.app
 
-MAKE_DMG=1 ./build_app.sh   # 额外生成 .build/dist/GeoViewer-0.2.0.dmg
-APP_VERSION=0.2.0 ./build_app.sh
+MAKE_DMG=1 ./build_app.sh   # 额外生成 .build/dist/GeoViewer-0.3.0.dmg
+APP_VERSION=0.3.0 ./build_app.sh
 ```
 
 首次启动若被 Gatekeeper 拦截，可在访达右键 →「打开」，或：
