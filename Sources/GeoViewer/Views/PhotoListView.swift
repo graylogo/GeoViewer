@@ -207,6 +207,9 @@ private struct PhotoRow: View {
     var body: some View {
         HStack(spacing: 9) {
             PhotoThumbnail(photo: photo, maxPixel: 120, size: 42, cornerRadius: 5)
+                .overlay(alignment: .bottomTrailing) {
+                    gpsBadge
+                }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(photo.displayName)
@@ -248,8 +251,28 @@ private struct PhotoRow: View {
 
     /// 坐标不再占用列表第二行，改为放进悬浮提示，需要时再看。
     private var helpText: String {
-        let location = photo.stagedCoordinate?.formatted ?? "未记录"
-        return "\(photo.url.path)\n位置：\(location)"
+        let path = photo.url.path
+        if let coordinate = photo.stagedCoordinate {
+            return "\(path)\n已记录位置：\(coordinate.formatted)"
+        }
+        return "\(path)\n未记录位置（无 GPS）"
+    }
+
+    /// GPS 状态角标：无位置用醒目红标提醒补 GPS，有位置用半透明小标轻轻区分。
+    @ViewBuilder
+    private var gpsBadge: some View {
+        if photo.hasLocation {
+            Image(systemName: "mappin.circle.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.mint)
+                .opacity(0.85)
+        } else {
+            Image(systemName: "mappin.slash")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(4)
+                .background(Circle().fill(Color.red))
+        }
     }
 }
 
